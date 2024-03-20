@@ -5,114 +5,76 @@
  * @format
  */
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
   StyleSheet,
-  Text,
-  useColorScheme,
-  View,
+  View
 } from 'react-native';
+import { TimerCountDownDisplay } from './TimerCountDownDisplay';
+import { TimerToggleButton } from './TimerToggleButton';
+import { TimerModeDisplay, TimerModes } from './TimerModeDisplay';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+const FOCUS_TIME_MINUTES = 25 * 60 * 1000; //25 mins
+const BREAK_TIME_MINUTES = 5 * 60 * 1000; //5 mins
 
 function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  //timerCount and setTimerCount are state variables
+  const [timerCount, setTimerCount] = useState<number>(FOCUS_TIME_MINUTES);
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const [timerInterval, setTimerInterval] = useState<NodeJS.Timer | null>(null); //initialize to null
+
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+
+  const [timerMode, setTimerMode] = useState<TimerModes>("Focus"); //a union type
+
+  useEffect(() => {
+    if (timerCount == 0) {
+      //if timer ended, reset the timer and change timer mode to break. otherwise, set it to focus and set timer
+      if(timerMode == "Focus") {
+        setTimerMode('Break');
+        setTimerCount(BREAK_TIME_MINUTES); //reset timer count
+      } 
+      else {
+        setTimerMode('Focus');
+        setTimerCount(FOCUS_TIME_MINUTES); 
+      }
+      stopTimer();
+    }
+  },[timerCount])
+
+  //startTimer function
+  const startTimer = () => {
+    setIsTimerRunning(true);
+    //it decreases by 1 second every second
+    const id = setInterval(() => setTimerCount(prev => prev - 1000), 1000); //1000 = 1 second
+    setTimerInterval(id);
+  };
+
+  const stopTimer = () => {
+    if(timerInterval != null) {
+      clearInterval(timerInterval);
+    }
+    setIsTimerRunning(false);
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+    //
+    <View style={{...styles.container, ...{backgroundColor: timerMode == 'Break' ? "#2a9d8f" : "#c95550"}}}>
+      <TimerModeDisplay timerMode={timerMode}/>
+      <TimerToggleButton isTimerRunning={isTimerRunning} startTimer={startTimer} stopTimer={stopTimer} />
+      <TimerCountDownDisplay timerDate={new Date(timerCount)} />
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: '#c95550',
+    alignItems: 'center',
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
+
 });
 
 export default App;
